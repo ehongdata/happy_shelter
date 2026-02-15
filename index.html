@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐾 Happy Paws Shelter</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --wall: #FDEBD0; --floor: #D4A574; --floor2: #B8885A;
+  --window-sky: #87CEEB; --cream: #FFF9F2; --text: #3D2B1F;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Nunito',sans-serif; background:#FFF9F2; overflow-x:hidden; }
+
+.game-shell { display:grid; grid-template-rows:auto 1fr auto; min-height:100vh; max-width:960px; margin:0 auto; }
+
+/* HEADER */
+header {
+  background:linear-gradient(135deg,#FF8FAB,#FFCC70);
+  padding:10px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  box-shadow:0 3px 12px rgba(0,0,0,.12);
+}
+header h1 { font-family:'Baloo 2',cursive; font-size:clamp(1.3rem,4vw,1.9rem); color:white; text-shadow:2px 2px 0 rgba(0,0,0,.15); }
+.stat-row { display:flex; gap:8px; flex-wrap:wrap; }
+.stat { background:rgba(255,255,255,.85); border-radius:50px; padding:5px 14px; font-weight:900; font-size:.85rem; color:#3D2B1F; transition:all .3s; }
+.stat.bump { animation:statBump .4s ease; }
+@keyframes statBump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+
+/* SCENE */
+.scene-wrap {
+  position:relative; width:100%;
+  background:linear-gradient(180deg,#C8E6FF 0%,#E8F5E9 100%);
+  overflow:hidden; min-height:360px; max-height:420px; flex-shrink:0;
+  transition:background 1.2s;
+}
+
+/* Sky */
+.cloud { position:absolute; top:18px; background:white; border-radius:50px; opacity:.85; animation:cloudDrift linear infinite; }
+.cloud::before,.cloud::after { content:''; position:absolute; background:white; border-radius:50%; }
+#cloud1 { width:80px;height:28px;left:-90px;animation-duration:22s;top:22px; }
+#cloud1::before { width:38px;height:38px;top:-18px;left:12px; }
+#cloud1::after  { width:28px;height:28px;top:-12px;left:38px; }
+#cloud2 { width:60px;height:22px;left:-70px;animation-duration:30s;animation-delay:-12s;top:50px; }
+#cloud2::before { width:28px;height:28px;top:-14px;left:8px; }
+#cloud2::after  { width:22px;height:22px;top:-10px;left:28px; }
+@keyframes cloudDrift { from{left:-100px} to{left:110%} }
+
+.sun {
+  position:absolute; top:16px; right:16px; width:52px; height:52px;
+  background:radial-gradient(circle,#FFE57A 60%,#FFB300 100%); border-radius:50%;
+  box-shadow:0 0 0 8px rgba(255,229,122,.35),0 0 0 16px rgba(255,229,122,.15); transition:all 1.2s;
+}
+.sun.night { background:radial-gradient(circle,#B0C4DE 60%,#6B8CBA 100%); box-shadow:0 0 0 8px rgba(176,196,222,.3); }
+
+/* SHELTER */
+.shelter {
+  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  width:min(580px,96%); transition:width .8s ease;
+}
+.shelter.tier2 { width:min(660px,97%); }
+.shelter.tier3 { width:min(740px,98%); }
+.shelter.tier4 { width:min(820px,99%); }
+
+/* Roof */
+.roof-wrap { position:relative; width:100%; text-align:center; }
+.roof-shape {
+  width:0; height:0;
+  border-left:300px solid transparent; border-right:300px solid transparent;
+  border-bottom:110px solid #E74C3C;
+  margin:0 auto; filter:drop-shadow(0 -4px 8px rgba(0,0,0,.12));
+  transition:border-bottom-color .8s, border-left-width .8s, border-right-width .8s, border-bottom-width .8s;
+}
+.roof-stripe {
+  width:0; height:0;
+  border-left:290px solid transparent; border-right:290px solid transparent;
+  border-bottom:100px solid #C0392B;
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  transition:border-bottom-color .8s, border-left-width .8s, border-right-width .8s;
+}
+/* Tier roof overrides */
+.shelter.tier2 .roof-shape  { border-left-width:340px; border-right-width:340px; border-bottom-color:#27AE60; }
+.shelter.tier2 .roof-stripe { border-left-width:330px; border-right-width:330px; border-bottom-color:#1E8449; }
+.shelter.tier3 .roof-shape  { border-left-width:380px; border-right-width:380px; border-bottom-color:#2980B9; }
+.shelter.tier3 .roof-stripe { border-left-width:370px; border-right-width:370px; border-bottom-color:#1A5276; }
+.shelter.tier4 .roof-shape  { border-left-width:420px; border-right-width:420px; border-bottom-color:#8E44AD; }
+.shelter.tier4 .roof-stripe { border-left-width:410px; border-right-width:410px; border-bottom-color:#6C3483; }
+
+/* Flag on roof */
+.flag-pole {
+  position:absolute; top:-70px; left:50%; transform:translateX(-50%);
+  width:4px; height:60px; background:#8B6347; border-radius:2px;
+  opacity:0; transition:opacity .5s;
+}
+.flag-pole.visible { opacity:1; }
+.flag-banner {
+  position:absolute; top:2px; left:4px;
+  width:26px; height:16px; background:#FF8FAB;
+  clip-path:polygon(0 0,100% 25%,100% 75%,0 100%);
+  animation:flagWave 2s ease-in-out infinite;
+}
+@keyframes flagWave { 0%,100%{skewY(-3deg)} 50%{skewY(3deg)} }
+
+.chimney { position:absolute; top:-46px; right:120px; width:28px; height:50px; background:#9E7B5A; border-radius:4px 4px 0 0; }
+.chimney2 { position:absolute; top:-46px; left:110px; width:22px; height:44px; background:#9E7B5A; border-radius:4px 4px 0 0; opacity:0; transition:opacity .5s; }
+.chimney2.visible { opacity:1; }
+.smoke { position:absolute; top:-14px; left:50%; transform:translateX(-50%); animation:smokeRise 2.4s ease-in-out infinite; font-size:1.3rem; }
+@keyframes smokeRise { 0%{opacity:0;transform:translateX(-50%) translateY(0) scale(.5)} 40%{opacity:.7} 100%{opacity:0;transform:translateX(-50%) translateY(-28px) scale(1.4)} }
+
+/* Building body */
+.building {
+  background:var(--wall); width:100%; height:200px; position:relative;
+  border-radius:0 0 8px 8px; border:3px solid #E8C99A;
+  transition:background .8s, height .8s, border-color .8s; overflow:hidden;
+}
+.shelter.tier2 .building { height:220px; background:#FEF9F0; border-color:#D5E8C0; }
+.shelter.tier3 .building { height:240px; background:#EAF4FB; border-color:#A9CCE3; }
+.shelter.tier4 .building { height:260px; background:#F5EEF8; border-color:#D2B4DE; }
+
+.interior-floor {
+  position:absolute; bottom:0; left:0; right:0; height:38px;
+  background:repeating-linear-gradient(90deg,var(--floor) 0,var(--floor) 30px,var(--floor2) 30px,var(--floor2) 32px);
+  border-top:3px solid #A0683A; transition:background .8s;
+}
+.shelter.tier3 .interior-floor { background:repeating-linear-gradient(90deg,#C8A97A 0,#C8A97A 30px,#B89060 30px,#B89060 32px); }
+.shelter.tier4 .interior-floor { background:repeating-linear-gradient(90deg,#B8A0D4 0,#B8A0D4 30px,#A080C0 30px,#A080C0 32px); border-top-color:#9060B0; }
+
+/* Rugs on floor (tier 2+) */
+.rug { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); width:80px; height:10px; border-radius:5px; background:linear-gradient(90deg,#FF8FAB,#FFCC70,#FF8FAB); opacity:0; transition:opacity .5s; }
+.shelter.tier2 .rug,.shelter.tier3 .rug,.shelter.tier4 .rug { opacity:1; }
+
+/* Plants inside (tier 3+) */
+.indoor-plant { position:absolute; bottom:38px; font-size:1.3rem; opacity:0; transition:opacity .5s; }
+.indoor-plant.left  { left:8px; }
+.indoor-plant.right { right:8px; }
+.shelter.tier3 .indoor-plant,.shelter.tier4 .indoor-plant { opacity:1; }
+
+/* Star decorations on wall (tier4) */
+.wall-stars { position:absolute; top:0; left:0; right:0; bottom:38px; pointer-events:none; }
+.wall-star { position:absolute; font-size:.9rem; opacity:0; animation:twinkle 2s ease-in-out infinite; }
+.shelter.tier4 .wall-star { opacity:.4; }
+@keyframes twinkle { 0%,100%{opacity:.25} 50%{opacity:.7} }
+
+/* Sign */
+.shelter-sign {
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  background:#FF8FAB; color:white; border-radius:10px;
+  padding:4px 14px; font-family:'Baloo 2',cursive; font-size:.85rem;
+  box-shadow:0 3px 8px rgba(0,0,0,.15); white-space:nowrap; border:2px solid white;
+  transition:background .5s;
+}
+.shelter.tier2 .shelter-sign { background:#27AE60; }
+.shelter.tier3 .shelter-sign { background:#2980B9; }
+.shelter.tier4 .shelter-sign { background:linear-gradient(135deg,#8E44AD,#FF8FAB); }
+
+/* Windows */
+.window {
+  position:absolute; width:64px; height:64px; background:var(--window-sky);
+  border-radius:8px 8px 0 0; border:3px solid #8A6240; overflow:hidden; transition:background .8s;
+}
+.window::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(#8A6240 1.5px,transparent 1.5px) 50%/100% 50%,
+             linear-gradient(90deg,#8A6240 1.5px,transparent 1.5px) 50%/50% 100%;
+}
+.window-light { position:absolute; inset:0; background:radial-gradient(circle at 50% 80%,rgba(255,240,120,.6) 0%,transparent 70%); opacity:0; transition:opacity .8s; pointer-events:none; }
+.win-left  { top:48px; left:42px; }
+.win-right { top:48px; right:42px; }
+/* Extra windows tier3+ */
+.win-mid-l { top:48px; left:calc(50% - 80px); opacity:0; transition:opacity .5s; }
+.win-mid-r { top:48px; right:calc(50% - 80px); opacity:0; transition:opacity .5s; }
+.shelter.tier3 .win-mid-l,.shelter.tier3 .win-mid-r,
+.shelter.tier4 .win-mid-l,.shelter.tier4 .win-mid-r { opacity:1; }
+/* Flower boxes on windows tier2+ */
+.win-box { position:absolute; bottom:-10px; left:-3px; right:-3px; height:12px; background:#E74C3C; border-radius:0 0 4px 4px; opacity:0; transition:opacity .4s; }
+.win-box::after { content:'🌸'; position:absolute; top:-8px; left:50%; transform:translateX(-50%); font-size:.75rem; }
+.shelter.tier2 .win-box,.shelter.tier3 .win-box,.shelter.tier4 .win-box { opacity:1; }
+
+/* Door */
+.door {
+  position:absolute; bottom:38px; left:50%; transform:translateX(-50%);
+  width:60px; height:86px; background:linear-gradient(180deg,#6D4C41,#4E342E);
+  border-radius:10px 10px 0 0; border:3px solid #3E2723; overflow:hidden;
+}
+.door-knob { position:absolute; right:9px; top:50%; width:7px; height:7px; background:#FFD700; border-radius:50%; box-shadow:0 0 4px rgba(255,215,0,.6); }
+.door-open { position:absolute; inset:0; background:linear-gradient(135deg,#3E2723 0%,#6D4C41 100%); transform-origin:left center; transform:perspective(200px) rotateY(0deg); transition:transform .5s; }
+.door-open.ajar { transform:perspective(200px) rotateY(-55deg); }
+/* Door mat tier2+ */
+.door-mat { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); width:70px; height:10px; background:linear-gradient(90deg,#8B6347,#A0683A,#8B6347); border-radius:3px; opacity:0; font-size:.6rem; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.6); font-weight:900; transition:opacity .5s; }
+.shelter.tier2 .door-mat,.shelter.tier3 .door-mat,.shelter.tier4 .door-mat { opacity:1; }
+
+/* Pens */
+.pens-row { position:absolute; bottom:48px; left:0; right:0; display:flex; justify-content:space-around; align-items:flex-end; padding:0 10px; height:120px; }
+.pen { display:flex; flex-direction:column; align-items:center; width:56px; transition:transform .3s; }
+.pen.bounce { animation:penBounce .45s ease; }
+@keyframes penBounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-10px)} }
+.pen-fence { width:54px; height:34px; background:repeating-linear-gradient(90deg,#A0683A 0,#A0683A 4px,transparent 4px,transparent 10px); border-top:3px solid #A0683A; border-radius:3px; margin-bottom:1px; }
+.pen-animal { font-size:2rem; line-height:1; text-align:center; display:block; transition:filter .5s,transform .3s; cursor:pointer; user-select:none; }
+.pen-animal:hover { transform:scale(1.18) rotate(-5deg); }
+.pen-animal.sad   { filter:grayscale(60%) brightness(.8); }
+.pen-animal.happy { filter:drop-shadow(0 0 6px gold); }
+.pen-name { font-size:.58rem; font-weight:900; color:#5D3A1A; white-space:nowrap; margin-top:1px; }
+
+/* Yard */
+.yard { position:absolute; bottom:0; left:0; right:0; height:50px; background:linear-gradient(180deg,#8BC34A 0%,#7CB342 100%); transition:background .8s; }
+.shelter.tier2 ~ .yard,.yard.tier2 { background:linear-gradient(180deg,#66BB6A 0%,#4CAF50 100%); }
+.path { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:70px; height:50px; background:linear-gradient(180deg,#D4A574,#C49A6C); clip-path:polygon(20% 0%,80% 0%,100% 100%,0% 100%); }
+.bush { position:absolute; bottom:44px; font-size:1.6rem; transition:transform .3s; }
+.bush:hover { transform:scale(1.1); }
+.flower { position:absolute; bottom:44px; font-size:1.1rem; animation:flowerSway 3s ease-in-out infinite; }
+@keyframes flowerSway { 0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)} }
+/* Extra yard decorations */
+.yard-deco { position:absolute; bottom:44px; font-size:1.2rem; opacity:0; transition:opacity .5s,transform .3s; }
+.yard-deco:hover { transform:scale(1.1); }
+
+/* Weather */
+.rain-wrap { position:absolute; inset:0; pointer-events:none; overflow:hidden; opacity:0; transition:opacity .8s; }
+.rain-drop { position:absolute; top:-20px; width:2px; border-radius:2px; background:rgba(100,160,255,.6); animation:rainFall linear infinite; }
+@keyframes rainFall { to{transform:translateY(500px)} }
+
+/* Capacity badge on scene */
+.cap-badge {
+  position:absolute; top:10px; left:12px; z-index:10;
+  background:rgba(255,255,255,.88); border-radius:50px;
+  padding:5px 12px; font-weight:900; font-size:.8rem; color:#3D2B1F;
+  box-shadow:0 2px 8px rgba(0,0,0,.12); display:flex; align-items:center; gap:5px;
+}
+.cap-pips { display:flex; gap:3px; }
+.cap-pip { width:10px; height:10px; border-radius:50%; background:#DDD; transition:background .3s; }
+.cap-pip.filled { background:#66BB6A; }
+.cap-pip.full   { background:#FF8FAB; }
+
+/* Effect */
+.effect { position:absolute; pointer-events:none; font-size:1.6rem; z-index:99; animation:effectFloat 1.1s ease forwards; }
+@keyframes effectFloat { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-60px) scale(1.5)} }
+
+/* CONTROL PANEL */
+.control-panel { background:white; border-top:3px solid #F5CBA7; padding:12px 16px 16px; }
+.tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.tab {
+  font-family:'Baloo 2',cursive; font-size:.9rem; padding:7px 16px; border:none; border-radius:50px;
+  cursor:pointer; background:#F5F0EB; color:#8B6347; box-shadow:0 2px 6px rgba(0,0,0,.08); transition:all .18s;
+}
+.tab:hover { transform:translateY(-2px); }
+.tab.active { color:white; background:linear-gradient(135deg,#FF8FAB,#FFCC70); box-shadow:0 4px 12px rgba(255,143,171,.4); }
+.panel { display:none; }
+.panel.active { display:block; animation:fadeUp .25s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* Animal chips */
+.animal-list { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.animal-chip { background:#FFF3E8; border:2px solid #F5CBA7; border-radius:50px; padding:5px 14px; cursor:pointer; font-weight:800; font-size:.85rem; transition:all .18s; display:flex; align-items:center; gap:5px; }
+.animal-chip:hover { border-color:#FF8FAB; transform:scale(1.05); }
+.animal-chip.selected { background:linear-gradient(135deg,#FF8FAB,#FFCC70); border-color:transparent; color:white; }
+.animal-chip .chip-dot { width:8px; height:8px; border-radius:50%; background:#FF8FAB; }
+.animal-chip.selected .chip-dot { background:white; }
+.chip-need { font-size:.7rem; opacity:.75; }
+
+/* Care buttons */
+.care-row { display:flex; gap:9px; flex-wrap:wrap; }
+.care-btn { font-family:'Baloo 2',cursive; font-size:.9rem; padding:9px 16px; border:none; border-radius:14px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; transition:all .18s; box-shadow:0 3px 10px rgba(0,0,0,.1); color:white; min-width:70px; }
+.care-btn .icon { font-size:1.4rem; }
+.care-btn .lbl  { font-size:.72rem; }
+.care-btn:hover   { transform:translateY(-3px) scale(1.05); }
+.care-btn:active  { transform:scale(.95); }
+.care-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.care-btn.feed   { background:linear-gradient(135deg,#FF922B,#FFD43B); color:#3D2B1F; }
+.care-btn.play   { background:linear-gradient(135deg,#FF8FAB,#E040FB); }
+.care-btn.bath   { background:linear-gradient(135deg,#29B6F6,#26C6DA); }
+.care-btn.cuddle { background:linear-gradient(135deg,#FF8FAB,#FFAB40); color:#3D2B1F; }
+.care-btn.treat  { background:linear-gradient(135deg,#66BB6A,#CDDC39); color:#3D2B1F; }
+.care-btn.vet    { background:linear-gradient(135deg,#EF5350,#EC407A); }
+
+/* Status bars */
+.status-bars { margin:10px 0; display:flex; flex-direction:column; gap:5px; }
+.bar-row { display:flex; align-items:center; gap:7px; font-size:.8rem; font-weight:800; color:#8B6347; }
+.bar-track { flex:1; height:9px; background:#F0EDE8; border-radius:10px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:10px; transition:width .5s; }
+.bar-fill.food  { background:linear-gradient(90deg,#FF922B,#FFD43B); }
+.bar-fill.happy { background:linear-gradient(90deg,#FF8FAB,#E040FB); }
+.bar-fill.clean { background:linear-gradient(90deg,#29B6F6,#26C6DA); }
+
+/* Rescue */
+.rescue-row { display:flex; gap:10px; flex-wrap:wrap; }
+.rescue-card { background:#FFF8F0; border:2px dashed #F5CBA7; border-radius:16px; padding:12px; text-align:center; flex:1; min-width:130px; transition:all .18s; }
+.rescue-card:hover { border-color:#FF8FAB; transform:translateY(-2px); }
+.rescue-card .rc-em { font-size:2rem; display:block; }
+.rescue-card h4 { font-size:.85rem; font-weight:900; }
+.rescue-card p  { font-size:.72rem; color:#999; margin:2px 0 8px; }
+.rescue-btn { font-family:'Baloo 2',cursive; font-size:.82rem; padding:6px 14px; border:none; border-radius:50px; background:linear-gradient(135deg,#FF922B,#FFD43B); color:#3D2B1F; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.12); transition:all .18s; width:100%; }
+.rescue-btn:hover { transform:scale(1.04); }
+.rescue-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* Adopt */
+.adopt-row { display:flex; flex-direction:column; gap:8px; }
+.adopt-card { background:#FFF8F0; border:2px solid #F5CBA7; border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.adopt-card .vem { font-size:2rem; }
+.adopt-card .vinfo { flex:1; min-width:100px; }
+.adopt-card .vinfo h4 { font-size:.9rem; font-weight:900; }
+.adopt-card .vinfo p  { font-size:.75rem; color:#999; }
+.adopt-card .vinfo .wants { font-size:.8rem; color:#7B1FA2; font-weight:800; }
+.adopt-btn { font-family:'Baloo 2',cursive; font-size:.82rem; padding:7px 16px; border:none; border-radius:50px; background:linear-gradient(135deg,#FF8FAB,#E040FB); color:white; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.12); transition:all .18s; white-space:nowrap; }
+.adopt-btn:hover { transform:scale(1.06); }
+.adopt-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ── UPGRADES ── */
+.upgrade-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.upgrade-card {
+  background:#FFF8F0; border:2.5px solid #F5CBA7; border-radius:18px;
+  padding:14px 12px; text-align:center; position:relative; transition:all .2s;
+  overflow:hidden;
+}
+.upgrade-card:hover { transform:translateY(-3px); box-shadow:0 6px 18px rgba(0,0,0,.1); }
+.upgrade-card.unlocked { border-color:#66BB6A; background:linear-gradient(135deg,#F0FFF4,#FFFDE7); }
+.upgrade-card.maxed    { border-color:#FFD700; background:linear-gradient(135deg,#FFFDE7,#FFF8DC); }
+.upgrade-card.locked   { opacity:.55; }
+
+.upg-icon { font-size:2.4rem; display:block; margin-bottom:6px; }
+.upg-name { font-family:'Baloo 2',cursive; font-size:1rem; font-weight:800; margin-bottom:3px; }
+.upg-desc { font-size:.75rem; color:#999; margin-bottom:8px; line-height:1.35; }
+.upg-level { display:flex; gap:4px; justify-content:center; margin-bottom:8px; }
+.upg-pip { width:14px; height:14px; border-radius:50%; background:#EEE; border:2px solid #DDD; transition:all .3s; }
+.upg-pip.done { background:linear-gradient(135deg,#66BB6A,#CDDC39); border-color:#4CAF50; }
+.upg-pip.current { background:linear-gradient(135deg,#FFD43B,#FF922B); border-color:#FF922B; animation:pipPulse 1.5s ease-in-out infinite; }
+@keyframes pipPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+
+.upg-btn {
+  font-family:'Baloo 2',cursive; font-size:.82rem; padding:7px 16px; border:none; border-radius:50px;
+  cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.12); transition:all .18s; width:100%; color:white;
+  background:linear-gradient(135deg,#FF8FAB,#FFCC70);
+}
+.upg-btn:hover   { transform:scale(1.04); }
+.upg-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.upg-btn.maxed   { background:linear-gradient(135deg,#FFD700,#FFA000); color:#3D2B1F; }
+
+.upg-badge { position:absolute; top:-1px; right:-1px; background:#FFD700; color:#3D2B1F; font-size:.6rem; font-weight:900; padding:3px 9px; border-radius:0 16px 0 10px; }
+
+/* Capacity bar (bottom of upgrades panel) */
+.cap-overview {
+  background:linear-gradient(135deg,#FFF8F0,#F0FFF4); border:2px solid #E8C99A; border-radius:16px;
+  padding:14px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.cap-overview .big-num { font-family:'Baloo 2',cursive; font-size:2.2rem; color:#FF8FAB; line-height:1; }
+.cap-overview .cap-info h3 { font-size:.95rem; font-weight:900; }
+.cap-overview .cap-info p  { font-size:.78rem; color:#999; }
+.cap-track-big { flex:1; min-width:120px; height:14px; background:#F0EDE8; border-radius:10px; overflow:hidden; }
+.cap-fill-big { height:100%; border-radius:10px; background:linear-gradient(90deg,#66BB6A,#CDDC39); transition:width .6s ease; }
+.cap-fill-big.warn { background:linear-gradient(90deg,#FF922B,#FFD43B); }
+.cap-fill-big.full { background:linear-gradient(90deg,#EF5350,#FF8FAB); }
+
+/* Next day */
+.next-day-row { text-align:center; margin-top:14px; }
+.next-day-btn { font-family:'Baloo 2',cursive; font-size:1.05rem; padding:11px 34px; border:none; border-radius:50px; background:linear-gradient(135deg,#66BB6A,#CDDC39); color:#3D2B1F; cursor:pointer; box-shadow:0 4px 16px rgba(102,187,106,.4); transition:all .2s; }
+.next-day-btn:hover { transform:translateY(-3px) scale(1.04); }
+
+/* Toast */
+.toast-zone { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; }
+.toast { background:white; padding:10px 22px; border-radius:50px; font-weight:800; font-size:.9rem; box-shadow:0 5px 18px rgba(0,0,0,.18); animation:toastIn .3s ease, toastOut .3s ease 2.3s forwards; white-space:nowrap; }
+@keyframes toastIn  { from{opacity:0;transform:translateY(16px) scale(.9)} to{opacity:1;transform:none} }
+@keyframes toastOut { to{opacity:0;transform:translateY(-10px)} }
+
+.empty { text-align:center; padding:18px; color:#ccc; font-weight:700; font-size:.9rem; }
+
+/* Upgrade unlock animation */
+@keyframes upgradeFlash { 0%{box-shadow:0 0 0 0 rgba(255,215,0,.8)} 100%{box-shadow:0 0 0 30px rgba(255,215,0,0)} }
+.upgrade-card.flash { animation:upgradeFlash .6s ease; }
+</style>
+</head>
+<body>
+<div class="game-shell">
+
+<header>
+  <h1>🐾 Happy Paws Shelter</h1>
+  <div class="stat-row">
+    <div class="stat" id="s-money">💰 $120</div>
+    <div class="stat" id="s-day">📅 Day 1</div>
+    <div class="stat" id="s-adopted">🏠 0 Adopted</div>
+    <div class="stat" id="s-cap">🐾 3/6</div>
+  </div>
+</header>
+
+<!-- SCENE -->
+<div class="scene-wrap" id="scene">
+  <div class="cloud" id="cloud1"></div>
+  <div class="cloud" id="cloud2"></div>
+  <div class="sun" id="sun"></div>
+  <div class="rain-wrap" id="rain-wrap"></div>
+
+  <!-- Capacity badge -->
+  <div class="cap-badge" id="cap-badge">
+    <span id="cap-label">🐾 3 / 6</span>
+    <div class="cap-pips" id="cap-pips"></div>
+  </div>
+
+  <!-- Yard -->
+  <div class="yard" id="yard">
+    <div class="path"></div>
+    <div class="bush"     style="left:5%">🌿</div>
+    <div class="bush"     style="left:12%">🌳</div>
+    <div class="bush"     style="right:8%">🌿</div>
+    <div class="bush"     style="right:14%">🌲</div>
+    <div class="flower"   style="left:22%;animation-delay:0s">🌸</div>
+    <div class="flower"   style="left:30%;animation-delay:.5s">🌼</div>
+    <div class="flower"   style="right:20%;animation-delay:1s">🌺</div>
+    <div class="flower"   style="right:28%;animation-delay:1.7s">🌻</div>
+    <!-- Extra yard decos unlocked by upgrades -->
+    <div class="yard-deco" id="yd-bench"  style="left:3%;bottom:38px">🪑</div>
+    <div class="yard-deco" id="yd-pool"   style="left:16%;bottom:38px">🏊</div>
+    <div class="yard-deco" id="yd-lamp"   style="right:3%;bottom:38px">🪔</div>
+    <div class="yard-deco" id="yd-garden" style="right:18%;bottom:38px">🌻</div>
+    <div class="yard-deco" id="yd-fence"  style="left:36%;bottom:38px">🚧</div>
+    <div class="yard-deco" id="yd-pond"   style="right:36%;bottom:38px">🐟</div>
+  </div>
+
+  <!-- Shelter building -->
+  <div class="shelter" id="shelter-el">
+    <div class="roof-wrap">
+      <div class="roof-shape" id="roof-shape"></div>
+      <div class="roof-stripe" id="roof-stripe"></div>
+      <div class="chimney"><div class="smoke">💨</div></div>
+      <div class="chimney2" id="chimney2"><div class="smoke">💨</div></div>
+      <div class="flag-pole" id="flag-pole"><div class="flag-banner"></div></div>
+    </div>
+    <div class="building" id="building">
+      <div class="shelter-sign" id="shelter-sign">🐾 Happy Paws</div>
+
+      <!-- Wall stars (tier4) -->
+      <div class="wall-stars">
+        <div class="wall-star" style="top:20%;left:15%;animation-delay:0s">⭐</div>
+        <div class="wall-star" style="top:40%;left:25%;animation-delay:.5s">✨</div>
+        <div class="wall-star" style="top:20%;right:15%;animation-delay:1s">⭐</div>
+        <div class="wall-star" style="top:50%;right:22%;animation-delay:1.5s">✨</div>
+      </div>
+
+      <!-- Windows -->
+      <div class="window win-left"><div class="win-box"></div><div class="window-light" id="wl-l"></div></div>
+      <div class="window win-right"><div class="win-box"></div><div class="window-light" id="wl-r"></div></div>
+      <div class="window win-mid-l" id="win-ml"><div class="win-box"></div><div class="window-light" id="wl-ml"></div></div>
+      <div class="window win-mid-r" id="win-mr"><div class="win-box"></div><div class="window-light" id="wl-mr"></div></div>
+
+      <!-- Door -->
+      <div class="door">
+        <div class="door-open" id="door-open"></div>
+        <div class="door-knob"></div>
+      </div>
+      <div class="door-mat">HOME</div>
+
+      <!-- Interior plants -->
+      <div class="indoor-plant left">🌿</div>
+      <div class="indoor-plant right">🪴</div>
+
+      <!-- Rug -->
+      <div class="rug"></div>
+
+      <!-- Pens -->
+      <div class="pens-row" id="pens-row"></div>
+      <div class="interior-floor"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTROL PANEL -->
+<div class="control-panel">
+  <div class="tabs">
+    <button class="tab active" data-tab="care">💝 Care</button>
+    <button class="tab" data-tab="rescue">🚑 Rescue</button>
+    <button class="tab" data-tab="adopt">🏡 Adopt Out</button>
+    <button class="tab" data-tab="upgrade">⬆️ Upgrade</button>
+  </div>
+
+  <!-- CARE -->
+  <div class="panel active" id="panel-care">
+    <div class="animal-list" id="animal-list"></div>
+    <div id="sel-info" style="display:none">
+      <div class="status-bars" id="status-bars"></div>
+      <div class="care-row">
+        <button class="care-btn feed"   onclick="doAction('feed')">  <span class="icon">🍖</span><span class="lbl">Feed</span></button>
+        <button class="care-btn play"   onclick="doAction('play')">  <span class="icon">🎾</span><span class="lbl">Play</span></button>
+        <button class="care-btn bath"   onclick="doAction('bath')">  <span class="icon">🛁</span><span class="lbl">Bath</span></button>
+        <button class="care-btn cuddle" onclick="doAction('cuddle')"><span class="icon">🤗</span><span class="lbl">Cuddle</span></button>
+        <button class="care-btn treat"  onclick="doAction('treat')"> <span class="icon">🦴</span><span class="lbl">Treat $5</span></button>
+        <button class="care-btn vet"    onclick="doAction('vet')">   <span class="icon">💊</span><span class="lbl">Vet $20</span></button>
+      </div>
+    </div>
+    <div id="no-sel-msg" class="empty">👆 Pick an animal above to care for them!</div>
+  </div>
+
+  <!-- RESCUE -->
+  <div class="panel" id="panel-rescue">
+    <div class="rescue-row" id="rescue-row"></div>
+  </div>
+
+  <!-- ADOPT -->
+  <div class="panel" id="panel-adopt">
+    <div class="adopt-row" id="adopt-row"></div>
+  </div>
+
+  <!-- UPGRADE -->
+  <div class="panel" id="panel-upgrade">
+    <div class="cap-overview" id="cap-overview"></div>
+    <div class="upgrade-grid" id="upgrade-grid"></div>
+  </div>
+
+  <div class="next-day-row">
+    <button class="next-day-btn" onclick="nextDay()">☀️ Next Day</button>
+  </div>
+</div>
+
+</div>
+<div class="toast-zone" id="toast-zone"></div>
+
+<script>
+// ═══════════════════════════════════
+//  UPGRADES CONFIG
+// ═══════════════════════════════════
+const UPGRADES = [
+  {
+    id:'capacity', icon:'🏠', name:'Bigger Shelter',
+    desc:'Add more rooms so you can rescue more animals!',
+    levels:[
+      {label:'Small',   cap:6,  cost:0,   bonus:'Start capacity'},
+      {label:'Medium',  cap:10, cost:80,  bonus:'+4 animal spots'},
+      {label:'Large',   cap:16, cost:160, bonus:'+6 animal spots'},
+      {label:'Huge',    cap:24, cost:280, bonus:'+8 animal spots'},
+    ],
+  },
+  {
+    id:'garden', icon:'🌻', name:'Beautiful Garden',
+    desc:'A lovely garden attracts more adopters each day!',
+    levels:[
+      {label:'Bare',     visitors:2, cost:0,  bonus:'2 visitors/day'},
+      {label:'Planted',  visitors:3, cost:50, bonus:'+1 visitor/day'},
+      {label:'Blooming', visitors:4, cost:100,bonus:'+1 visitor/day'},
+      {label:'Paradise', visitors:5, cost:180,bonus:'+1 visitor/day'},
+    ],
+  },
+  {
+    id:'kitchen', icon:'🍖', name:'Feeding Station',
+    desc:'Better food keeps animals healthier every day!',
+    levels:[
+      {label:'Basic',   decay:12, cost:0,  bonus:'Normal hunger loss'},
+      {label:'Good',    decay:9,  cost:60, bonus:'Slower hunger loss'},
+      {label:'Great',   decay:6,  cost:120,bonus:'Much slower hunger loss'},
+      {label:'Gourmet', decay:3,  cost:200,bonus:'Minimal hunger loss'},
+    ],
+  },
+  {
+    id:'play',  icon:'🎾', name:'Play Area',
+    desc:'Fun equipment keeps animals happier every day!',
+    levels:[
+      {label:'Empty',   decay:10, cost:0,  bonus:'Normal mood loss'},
+      {label:'Basic',   decay:7,  cost:55, bonus:'Slower mood loss'},
+      {label:'Fun',     decay:4,  cost:110,bonus:'Much slower mood loss'},
+      {label:'Amazing', decay:1,  cost:190,bonus:'Animals stay super happy'},
+    ],
+  },
+  {
+    id:'grooming', icon:'🛁', name:'Grooming Spa',
+    desc:'A spa keeps animals clean and looking great!',
+    levels:[
+      {label:'None',    decay:10, cost:0,  bonus:'Normal cleanliness loss'},
+      {label:'Basic',   decay:7,  cost:55, bonus:'Slower cleanliness loss'},
+      {label:'Deluxe',  decay:4,  cost:110,bonus:'Much slower loss'},
+      {label:'Luxury',  decay:1,  cost:190,bonus:'Always fresh & clean'},
+    ],
+  },
+  {
+    id:'income', icon:'💰', name:'Donation Box',
+    desc:'A donation box brings in more money every day!',
+    levels:[
+      {label:'None',   bonus_income:0,  cost:0,  bonus:'$10 base income/day'},
+      {label:'Small',  bonus_income:10, cost:45, bonus:'+$10/day'},
+      {label:'Medium', bonus_income:25, cost:90, bonus:'+$15/day'},
+      {label:'Large',  bonus_income:50, cost:160,bonus:'+$25/day'},
+    ],
+  },
+];
+
+// ═══════════════════════════════════
+//  DATA
+// ═══════════════════════════════════
+const TYPES=[
+  {emoji:'🐶',name:'Dog',   breeds:['Golden','Beagle','Husky','Poodle']},
+  {emoji:'🐱',name:'Cat',   breeds:['Tabby','Persian','Calico','Siamese']},
+  {emoji:'🐰',name:'Rabbit',breeds:['Lop','Angora','Dutch','Rex']},
+  {emoji:'🐹',name:'Hamster',breeds:['Dwarf','Syrian','Robo']},
+  {emoji:'🦜',name:'Parrot', breeds:['Budgie','Cockatiel','Conure']},
+];
+const NAMES=['Coco','Bella','Max','Luna','Mochi','Oreo','Daisy','Pepper','Sky','Maple','Biscuit','Sunny'];
+const V_NAMES=['The Chen Family','Sofia M.','Jake & Lily','Grandma Rose','The Johnsons','Oliver','The Garcias','Mia & Tom'];
+const V_EMOJIS=['👨‍👩‍👧','👩','👧‍👦','👵','👨‍👩‍👦‍👦','👦','👨‍👩‍👧‍👦','👫'];
+const RESCUE_POOL=[
+  {emoji:'🐶',name:'Muddy Pup',   desc:'Found in the rain', type:'Dog'},
+  {emoji:'🐱',name:'Shy Whiskers',desc:'Stray, very shy',   type:'Cat'},
+  {emoji:'🐰',name:'Flopsy',      desc:'Lost near park',    type:'Rabbit'},
+  {emoji:'🐹',name:'Speedy',      desc:'Escaped old home',  type:'Hamster'},
+  {emoji:'🦜',name:'Chirpy',      desc:'Found on a fence',  type:'Parrot'},
+  {emoji:'🐶',name:'Biscuit',     desc:'Owner moved away',  type:'Dog'},
+  {emoji:'🐱',name:'Mittens',     desc:'Rescued from cold', type:'Cat'},
+  {emoji:'🐰',name:'Cottontail',  desc:'Hutch was broken',  type:'Rabbit'},
+];
+
+// ═══════════════════════════════════
+//  STATE
+// ═══════════════════════════════════
+let G={
+  money:120, day:1, adoptions:0,
+  animals:[], visitors:[], rescueOpts:[],
+  selId:null, nextId:1,
+  isNight:false, isRaining:false,
+  // upgrade levels (index into each upgrade's levels array, 0=base)
+  upgrades:{ capacity:0, garden:0, kitchen:0, play:0, grooming:0, income:0 },
+};
+
+function getUpgLevel(id){ return G.upgrades[id]||0; }
+function getUpgData(id){ const u=UPGRADES.find(x=>x.id===id); return u.levels[getUpgLevel(id)]; }
+function maxCap(){ return getUpgData('capacity').cap; }
+function maxVisitors(){ return getUpgData('garden').visitors; }
+function foodDecay(){ return getUpgData('kitchen').decay; }
+function happyDecay(){ return getUpgData('play').decay; }
+function cleanDecay(){ return getUpgData('grooming').decay; }
+function bonusIncome(){ return getUpgData('income').bonus_income||0; }
+
+function rnd(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function clamp(v,lo=0,hi=100){ return Math.max(lo,Math.min(hi,v)); }
+
+function mkAnimal(ov={}){
+  const t=TYPES[Math.floor(Math.random()*TYPES.length)];
+  const b=t.breeds[Math.floor(Math.random()*t.breeds.length)];
+  return { id:G.nextId++, emoji:t.emoji, name:NAMES[Math.floor(Math.random()*NAMES.length)], breed:b, type:t.name, food:rnd(45,85), happy:rnd(45,85), clean:rnd(45,85), daysHere:0, ...ov };
+}
+function mkVisitor(){
+  const i=Math.floor(Math.random()*V_NAMES.length);
+  const t=TYPES[Math.floor(Math.random()*TYPES.length)];
+  return {name:V_NAMES[i],emoji:V_EMOJIS[i],wantType:t.name,wantEmoji:t.emoji};
+}
+function mkRescue(){ return [...RESCUE_POOL].sort(()=>Math.random()-.5).slice(0,3); }
+
+G.animals=[mkAnimal(),mkAnimal(),mkAnimal()];
+G.visitors=[mkVisitor(),mkVisitor()];
+G.rescueOpts=mkRescue();
+
+// ═══════════════════════════════════
+//  SCENE
+// ═══════════════════════════════════
+function shelterTier(){
+  // Tier based on capacity upgrade level
+  const lv=getUpgLevel('capacity');
+  return 'tier'+(lv+1); // tier1..tier4
+}
+
+function applyYardDecos(){
+  const gardenLv=getUpgLevel('garden');
+  const playLv=getUpgLevel('play');
+  const incomeLv=getUpgLevel('income');
+  const show=(id,cond)=>{
+    const el=document.getElementById(id);
+    if(el) el.style.opacity=cond?'1':'0';
+  };
+  show('yd-bench',  gardenLv>=1);
+  show('yd-garden', gardenLv>=2);
+  show('yd-pond',   gardenLv>=3);
+  show('yd-fence',  playLv>=1);
+  show('yd-pool',   playLv>=2);
+  show('yd-lamp',   incomeLv>=1);
+}
+
+function renderScene(){
+  const scene=document.getElementById('scene');
+  // Sky
+  if(G.isNight){
+    scene.style.background='linear-gradient(180deg,#1a1a3e 0%,#2d3561 60%,#3a4a2a 100%)';
+    document.getElementById('sun').classList.add('night');
+  } else {
+    scene.style.background='linear-gradient(180deg,#C8E6FF 0%,#E8F5E9 100%)';
+    document.getElementById('sun').classList.remove('night');
+  }
+
+  // Rain
+  const rw=document.getElementById('rain-wrap');
+  rw.style.opacity=G.isRaining?'1':'0';
+  if(G.isRaining&&!rw.children.length) buildRain();
+
+  // Window glow at night
+  const glow=G.isNight?'1':'0';
+  ['wl-l','wl-r','wl-ml','wl-mr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.opacity=glow;
+  });
+
+  // Apply tier to shelter
+  const sh=document.getElementById('shelter-el');
+  sh.className='shelter '+shelterTier();
+
+  // Flag visible at tier3+
+  const flagLv=getUpgLevel('capacity');
+  document.getElementById('flag-pole').classList.toggle('visible',flagLv>=2);
+  document.getElementById('chimney2').classList.toggle('visible',flagLv>=1);
+
+  applyYardDecos();
+
+  // Capacity pips
+  const cap=G.animals.length, max=maxCap();
+  document.getElementById('cap-label').textContent=`🐾 ${cap} / ${max}`;
+  const pipsEl=document.getElementById('cap-pips');
+  const displayMax=Math.min(max,12);
+  pipsEl.innerHTML=Array.from({length:displayMax},(_,i)=>{
+    const cls=i<cap?(cap>=max?'cap-pip full':'cap-pip filled'):'cap-pip';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+
+  renderPens();
+}
+
+function renderPens(){
+  const row=document.getElementById('pens-row');
+  if(!G.animals.length){ row.innerHTML=''; return; }
+  const visible=G.animals.slice(0,6);
+  row.innerHTML=visible.map(a=>{
+    const allGood=a.food>=70&&a.happy>=70&&a.clean>=70;
+    const bad=a.food<40||a.happy<40||a.clean<40;
+    const cls=bad?'sad':allGood?'happy':'';
+    return `<div class="pen" id="pen-${a.id}" onclick="clickPen(${a.id})">
+      <span class="pen-animal ${cls}" title="${a.name}">${a.emoji}</span>
+      <div class="pen-fence"></div>
+      <div class="pen-name">${a.name}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildRain(){
+  const w=document.getElementById('rain-wrap'); w.innerHTML='';
+  for(let i=0;i<55;i++){
+    const d=document.createElement('div'); d.className='rain-drop';
+    d.style.left=Math.random()*100+'%'; d.style.height=rnd(10,22)+'px';
+    d.style.animationDuration=(Math.random()*.6+.5)+'s'; d.style.animationDelay=Math.random()+'s';
+    w.appendChild(d);
+  }
+}
+
+function spawnEffect(emoji){
+  const scene=document.getElementById('scene');
+  const el=document.createElement('div'); el.className='effect'; el.textContent=emoji;
+  el.style.left=rnd(35,65)+'%'; el.style.top=rnd(30,55)+'%';
+  scene.appendChild(el); setTimeout(()=>el.remove(),1200);
+}
+function bouncePen(id){
+  const el=document.getElementById('pen-'+id); if(!el)return;
+  el.classList.remove('bounce'); void el.offsetWidth; el.classList.add('bounce');
+  setTimeout(()=>el.classList.remove('bounce'),500);
+}
+function animateDoor(open){ document.getElementById('door-open').classList.toggle('ajar',open); }
+
+// ═══════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════
+function render(){
+  document.getElementById('s-money').textContent='💰 $'+G.money;
+  document.getElementById('s-day').textContent='📅 Day '+G.day;
+  document.getElementById('s-adopted').textContent='🏠 '+G.adoptions+' Adopted';
+  document.getElementById('s-cap').textContent=`🐾 ${G.animals.length}/${maxCap()}`;
+  renderScene();
+  renderCarePanel();
+  renderRescuePanel();
+  renderAdoptPanel();
+  renderUpgradePanel();
+}
+
+function renderCarePanel(){
+  const list=document.getElementById('animal-list');
+  if(!G.animals.length){
+    list.innerHTML='<div class="empty">No animals yet! Rescue some 🚑</div>';
+    document.getElementById('sel-info').style.display='none';
+    document.getElementById('no-sel-msg').style.display='none';
+    return;
+  }
+  list.innerHTML=G.animals.map(a=>{
+    const bad=a.food<40||a.happy<40||a.clean<40;
+    const ready=a.food>=70&&a.happy>=70&&a.clean>=70;
+    const hint=bad?'⚠️':ready?'✓':'';
+    return `<div class="animal-chip ${G.selId===a.id?'selected':''}" onclick="selectAnimal(${a.id})">
+      <div class="chip-dot"></div>${a.emoji} ${a.name} <span class="chip-need">${hint}</span>
+    </div>`;
+  }).join('');
+  const sel=G.animals.find(a=>a.id===G.selId);
+  document.getElementById('sel-info').style.display=sel?'block':'none';
+  document.getElementById('no-sel-msg').style.display=sel?'none':'block';
+  if(sel){
+    document.getElementById('status-bars').innerHTML=`
+      <div class="bar-row">🍖 Food  <div class="bar-track"><div class="bar-fill food"  style="width:${sel.food}%"></div></div><span style="font-size:.75rem;min-width:28px">${sel.food}%</span></div>
+      <div class="bar-row">😄 Happy <div class="bar-track"><div class="bar-fill happy" style="width:${sel.happy}%"></div></div><span style="font-size:.75rem;min-width:28px">${sel.happy}%</span></div>
+      <div class="bar-row">🛁 Clean <div class="bar-track"><div class="bar-fill clean" style="width:${sel.clean}%"></div></div><span style="font-size:.75rem;min-width:28px">${sel.clean}%</span></div>`;
+  }
+}
+
+function renderRescuePanel(){
+  const row=document.getElementById('rescue-row');
+  const full=G.animals.length>=maxCap();
+  row.innerHTML=G.rescueOpts.map((r,i)=>`
+    <div class="rescue-card">
+      <span class="rc-em">${r.emoji}</span><h4>${r.name}</h4><p>${r.desc}</p>
+      <button class="rescue-btn" onclick="doRescue(${i})" ${full?'disabled':''}>
+        ${full?'🏠 Full':'🚑 Rescue!'}
+      </button>
+    </div>`).join('');
+}
+
+function renderAdoptPanel(){
+  const row=document.getElementById('adopt-row');
+  if(!G.visitors.length){ row.innerHTML='<div class="empty">No visitors today. Check back tomorrow!</div>'; return; }
+  row.innerHTML=G.visitors.map((v,i)=>{
+    const match=G.animals.find(a=>a.type===v.wantType&&a.food>=70&&a.happy>=70&&a.clean>=70);
+    return `<div class="adopt-card">
+      <span class="vem">${v.emoji}</span>
+      <div class="vinfo"><h4>${v.name}</h4><p>Looking for a companion</p><div class="wants">Wants: ${v.wantEmoji} ${v.wantType}</div></div>
+      <button class="adopt-btn" onclick="doAdopt(${i})" ${!match?'disabled':''}>
+        ${match?'❤️ Adopt!':'No match yet'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function renderUpgradePanel(){
+  // Capacity overview
+  const cap=G.animals.length, max=maxCap();
+  const pct=max?Math.round(cap/max*100):0;
+  const fillCls=pct>=100?'cap-fill-big full':pct>=75?'cap-fill-big warn':'cap-fill-big';
+  document.getElementById('cap-overview').innerHTML=`
+    <div class="big-num">${cap}<span style="font-size:1rem;color:#bbb">/${max}</span></div>
+    <div class="cap-info">
+      <h3>🏠 Current Capacity</h3>
+      <p>${max-cap} spots available · Upgrade "Bigger Shelter" for more!</p>
+    </div>
+    <div class="cap-track-big" style="flex:1;min-width:120px"><div class="${fillCls}" style="width:${pct}%"></div></div>`;
+
+  // Upgrade cards
+  document.getElementById('upgrade-grid').innerHTML=UPGRADES.map(u=>{
+    const lv=getUpgLevel(u.id);
+    const maxLv=u.levels.length-1;
+    const isMax=lv>=maxLv;
+    const nextLv=u.levels[lv+1];
+    const cost=nextLv?nextLv.cost:0;
+    const canAfford=G.money>=cost;
+    const tierClass=isMax?'maxed':lv>0?'unlocked':'';
+    const pips=u.levels.map((_,i)=>`<div class="upg-pip ${i<lv?'done':i===lv&&lv<u.levels.length?'current':''}"></div>`).join('');
+    const btnLabel=isMax?'✅ Maxed Out!':`Upgrade · $${cost}`;
+    const badgeTxt=isMax?'MAX!':lv>0?`Lv ${lv}`:'';
+
+    return `<div class="upgrade-card ${tierClass}" id="upg-card-${u.id}">
+      ${badgeTxt?`<div class="upg-badge">${badgeTxt}</div>`:''}
+      <span class="upg-icon">${u.icon}</span>
+      <div class="upg-name">${u.name}</div>
+      <div class="upg-desc">${u.desc}</div>
+      <div class="upg-level">${pips}</div>
+      <div style="font-size:.75rem;color:#66BB6A;font-weight:800;margin-bottom:8px">
+        ${u.levels[lv].label} · ${u.levels[lv].bonus}
+      </div>
+      ${!isMax?`<div style="font-size:.72rem;color:#999;margin-bottom:6px">Next: ${nextLv.bonus}</div>`:''}
+      <button class="upg-btn ${isMax?'maxed':''}" onclick="doUpgrade('${u.id}')"
+        ${isMax||!canAfford?'disabled':''}>
+        ${btnLabel}
+      </button>
+      ${!isMax&&!canAfford?`<div style="font-size:.7rem;color:#FF8FAB;margin-top:4px">Need $${cost-G.money} more</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════
+function selectAnimal(id){ G.selId=G.selId===id?null:id; render(); }
+function clickPen(id){
+  G.selId=id;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='care'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-care'));
+  render();
+}
+
+function doAction(type){
+  const a=G.animals.find(x=>x.id===G.selId); if(!a)return;
+  const fx={feed:'🍖',play:'🎾',bath:'🛁✨',cuddle:'💕',treat:'🦴⭐',vet:'💊💖'};
+  const msgs={
+    feed:`${a.name} loved their meal! 😋`, play:`${a.name} had a great time! 🎉`,
+    bath:`${a.name} is squeaky clean! ✨`, cuddle:`${a.name} feels so loved! 💕`,
+    treat:`${a.name} loved the special treat! 🌟`, vet:`${a.name} got a clean bill of health! 💚`
+  };
+  switch(type){
+    case 'feed':   a.food=clamp(a.food+25); break;
+    case 'play':   a.happy=clamp(a.happy+25); break;
+    case 'bath':   a.clean=clamp(a.clean+30); break;
+    case 'cuddle': a.happy=clamp(a.happy+15); a.food=clamp(a.food+5); break;
+    case 'treat':
+      if(G.money<5){toast('Not enough money! 💸');return;}
+      G.money-=5; a.food=clamp(a.food+20); a.happy=clamp(a.happy+20); break;
+    case 'vet':
+      if(G.money<20){toast('Not enough money! 💸');return;}
+      G.money-=20; a.food=clamp(a.food+15); a.happy=clamp(a.happy+15); a.clean=clamp(a.clean+15); break;
+  }
+  spawnEffect(fx[type]); bouncePen(a.id); toast(msgs[type]); render();
+}
+
+function doRescue(i){
+  if(G.animals.length>=maxCap()){toast('Shelter is full! Upgrade to rescue more! 🏠');return;}
+  const r=G.rescueOpts[i];
+  const t=TYPES.find(x=>x.name===r.type)||TYPES[0];
+  const a=mkAnimal({name:r.name,emoji:r.emoji,type:r.type,
+    breed:t.breeds[Math.floor(Math.random()*t.breeds.length)],
+    food:rnd(20,40),happy:rnd(20,40),clean:rnd(20,40)});
+  G.animals.push(a); G.rescueOpts=mkRescue();
+  animateDoor(true); setTimeout(()=>animateDoor(false),1800);
+  spawnEffect('🚑'); toast(`${r.name} is safe! Welcome to Happy Paws! 🐾`); render();
+}
+
+function doAdopt(i){
+  const v=G.visitors[i];
+  const idx=G.animals.findIndex(a=>a.type===v.wantType&&a.food>=70&&a.happy>=70&&a.clean>=70);
+  if(idx===-1)return;
+  const a=G.animals[idx];
+  G.animals.splice(idx,1); G.visitors.splice(i,1);
+  G.adoptions++; G.money+=30;
+  if(G.selId===a.id)G.selId=null;
+  animateDoor(true); setTimeout(()=>animateDoor(false),2000);
+  spawnEffect('🎉'); spawnEffect('💖');
+  toast(`${a.name} found a home with ${v.name}! 🏡 +$30`); render();
+}
+
+function doUpgrade(id){
+  const u=UPGRADES.find(x=>x.id===id);
+  const lv=getUpgLevel(id);
+  if(lv>=u.levels.length-1) return;
+  const nextLv=u.levels[lv+1];
+  if(G.money<nextLv.cost){toast('Not enough money! 💸');return;}
+  G.money-=nextLv.cost;
+  G.upgrades[id]=lv+1;
+
+  // Flash the card
+  const card=document.getElementById('upg-card-'+id);
+  if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),700); }
+
+  spawnEffect('⭐'); spawnEffect('🏠');
+  const msgs={
+    capacity:`Shelter expanded! Now fits ${nextLv.cap} animals! 🏠`,
+    garden:`Garden upgraded! More visitors will come! 🌸`,
+    kitchen:`Feeding station improved! Animals eat better! 🍖`,
+    play:`Play area upgraded! Animals are happier! 🎾`,
+    grooming:`Grooming spa improved! Animals stay cleaner! 🛁`,
+    income:`Donation box upgraded! More income every day! 💰`,
+  };
+  toast(msgs[id]||`${u.name} upgraded! ⭐`);
+  render();
+}
+
+function nextDay(){
+  G.day++;
+  G.animals.forEach(a=>{
+    a.food =clamp(a.food -rnd(Math.max(2,foodDecay()-4), foodDecay()));
+    a.happy=clamp(a.happy-rnd(Math.max(1,happyDecay()-3),happyDecay()));
+    a.clean=clamp(a.clean-rnd(Math.max(1,cleanDecay()-3),cleanDecay()));
+    a.daysHere++;
+  });
+  const income=10+G.adoptions*5+bonusIncome();
+  G.money+=income;
+  // Generate visitors based on garden level
+  const numV=Math.min(maxVisitors(), rnd(maxVisitors()-1, maxVisitors()));
+  G.visitors=Array.from({length:numV},mkVisitor);
+  G.rescueOpts=mkRescue();
+  G.isNight=!G.isNight;
+  G.isRaining=Math.random()<0.25;
+  if(G.isRaining) setTimeout(()=>{G.isRaining=false;document.getElementById('rain-wrap').style.opacity='0';},4000);
+  spawnEffect(G.isNight?'🌙':'☀️');
+  toast(`Day ${G.day} — Earned $${income}! ${G.isNight?'🌙':'☀️'}`);
+  render();
+}
+
+// ═══════════════════════════════════
+//  TABS
+// ═══════════════════════════════════
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const t=btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+t));
+  });
+});
+
+function toast(msg){
+  const z=document.getElementById('toast-zone');
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  z.appendChild(el); setTimeout(()=>el.remove(),2700);
+}
+
+render();
+</script>
+</body>
+</html>
